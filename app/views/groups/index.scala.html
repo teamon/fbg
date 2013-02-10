@@ -1,0 +1,7 @@
+@(groups: List[lib.facebook.Group])
+
+@main("fbg") {
+  @for(group <- groups){
+    - <a href="@routes.Groups.show(group.id)">@group.name</a>
+  }
+}

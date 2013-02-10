@@ -1,0 +1,14 @@
+@()(implicit request: RequestHeader)
+
+@main("fbg") {
+
+    @request.session.get("token") match {
+      case Some(_) => {
+        <a href="@routes.Groups.index">Manage groups</a>
+      }
+
+      case None => {
+        <a href="@routes.Auth.signIn">Sign in with Facebook</a>
+      }
+    }
+}

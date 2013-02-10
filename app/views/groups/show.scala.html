@@ -1,0 +1,20 @@
+@(group: lib.Group)
+
+@main("fbg") {
+  @group.name | <a href="@routes.Groups.sync(group.id)">sync</a>
+  @{(1 to group.name.length).map { _ => "=" }.mkString}
+
+  @group.description
+
+
+  # Feed
+  @for(msg <- group.feed){
+  From: @msg.from
+  Time: @msg.createdAt
+  Tags: @Html(msg.tags.map { tag => "<a href=\"" + routes.Groups.tag(group.id, tag) + "\">#" + tag + "</a>" }.mkString(", "))
+
+  @msg.content
+
+  -----
+  }
+}
