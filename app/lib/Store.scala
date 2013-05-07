@@ -31,12 +31,12 @@ class GroupActor(group: Group) extends Actor {
       } pipeTo self
 
     case StoreFeed(graph, fbfeed) =>
-      Logger.debug("-> store feed")
       val feed = fbfeed.entries.map { fbe =>
         MessageOps.fromFeedEntry(fbe)
       }
 
       if(feed.isEmpty){
+        Logger.debug("-> done")
         context.stop(self)
       } else {
         Store.saveFeed(group, feed)
@@ -67,6 +67,12 @@ object FBG {
     }
   }
 
+  def tags(id: String) = {
+    Store.getGroup(id).map { group =>
+      (group, Store.tags(group))
+    }
+  }
+
   def tag(id: String, tag: String) = {
     Store.getGroup(id).map { group =>
       (group, Store.tag(group, tag))
@@ -94,12 +100,20 @@ case class Message(
 )
 
 object MessageOps {
-  def fromFeedEntry(fbentry: facebook.FeedEntry) = {
-    val date = new SimpleDateFormat("yyy-MM-dd'T'HH:mm:ssZ").parse(fbentry.createdTime)
-    Message(fbentry.id, fbentry.from, fbentry.message, extractTags(fbentry.message), date)
+  def fromFeedEntry(fbe: facebook.FeedEntry) = {
+    val date = new SimpleDateFormat("yyy-MM-dd'T'HH:mm:ssZ").parse(fbe.createdTime)
+    val content = join(fbe.message, "\n\n", join(fbe.link, " - ", fbe.description)) getOrElse ""
+    Message(fbe.id, fbe.from, content, fbe.message.map(extractTags) getOrElse Set.empty, date)
   }
 
-  def extractTags(str: String) = "#(\\S+)".r.findAllMatchIn(str).map(_.group(1)).toSet
+  def join(a: Option[String], s: String, b: Option[String]) = (a,b) match {
+    case (Some(x), Some(y)) => Some(x + s + y)
+    case (Some(x), _)       => Some(x)
+    case (_,       Some(y)) => Some(y)
+    case _                  => None
+  }
+
+  def extractTags(str: String) = "(?:\\s)#(\\S+)".r.findAllMatchIn(" " + str).map(_.group(1)).toSet
 }
 
 object Store {
@@ -118,11 +132,9 @@ object Store {
   }
 
   def getFeed(groupId: String): List[Message] = {
-    val ids = redis.zrevrange(key("group", groupId, "feed"), 0, 100).toList
+    val ids = redis.zrevrange(key("group", groupId, "feed"), 0, -1).toList
     fetchFeed(groupId, ids)
   }
-
-
 
   def saveGroup(group: Group) =
     redis.hmset(key("group", group.id), Map(
@@ -134,13 +146,17 @@ object Store {
     for(msg <- feed){
       redis.exec(pipe => {
         val js = Json.stringify(Json.toJson(msg))
-        pipe.set(key("group", group.id, "feeds", msg.id), js)
+        pipe.set(key("group", group.id, "feed", msg.id), js)
         pipe.zadd(key("group", group.id, "feed"), msg.createdAt.getTime, msg.id)
         for(tag <- msg.tags){
+          pipe.sadd(key("group", group.id, "tags"), tag)
           pipe.sadd(key("group", group.id, "tags", tag), msg.id)
         }
       })
     }
+
+  def tags(group: Group) =
+    redis.smembers(key("group", group.id, "tags")).toList
 
   def tag(group: Group, tag: String) = {
     val ids = redis.smembers(key("group", group.id, "tags", tag)).toList
@@ -149,7 +165,7 @@ object Store {
 
   def fetchFeed(groupId: String, ids: List[String]) =
     ids.flatMap { id => // XXX: There is no MGET in scala-redis-client
-      redis.get(key("group", groupId, "feeds", id)).flatMap { str =>
+      redis.get(key("group", groupId, "feed", id)).flatMap { str =>
         Json.fromJson[Message](Json.parse(str)).asOpt
       }.toList
     }.toList

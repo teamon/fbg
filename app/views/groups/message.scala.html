@@ -1,0 +1,8 @@
+@(group: lib.Group, msg: lib.Message)
+  From: @msg.from
+  Time: @msg.createdAt
+  Tags: @Html(msg.tags.map { tag => "<a href=\"" + routes.Groups.tag(group.id, tag) + "\">#" + tag + "</a>" }.mkString(", "))
+
+  @Html(lib.autoAnchor(lib.ensureWidth(msg.content, 50, "  ")))
+
+  -----

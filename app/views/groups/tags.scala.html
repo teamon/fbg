@@ -1,4 +1,4 @@
-@(group: lib.Group, tag: String, messages: List[lib.Message])
+@(group: lib.Group, tags: List[String])
 
 @main("fbg") {
   <a href="@routes.Groups.show(group.id)">@group.name</a> | <a href="@routes.Groups.sync(group.id)">sync</a>
@@ -7,8 +7,9 @@
   @group.description
 
 
-  # Tag: @tag
+  # Tags
 
   -----
-  @for(msg <- messages){ @message(group, msg) }
+  @for(tag <- tags){
+  <a href="@routes.Groups.tag(group.id, tag)">@tag</a> }
 }

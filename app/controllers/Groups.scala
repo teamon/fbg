@@ -31,6 +31,13 @@ object Groups extends Controller {
     } } }
   }
 
+  def tags(id: String) = GraphAction { implicit graph =>
+    FBG.tags(id) match {
+      case Some((group, tags))  => Ok(views.html.groups.tags(group, tags.sorted))
+      case None                 => NotFound
+    }
+  }
+
   def tag(id: String, tag: String) = GraphAction { implicit graph =>
     FBG.tag(id, tag) match {
       case Some((group, messages))  => Ok(views.html.groups.tag(group, tag, messages))

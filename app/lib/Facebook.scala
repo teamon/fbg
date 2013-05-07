@@ -73,8 +73,15 @@ case class Feed(
 case class FeedEntry(
   id: String,
   from: String,
-  message: String,
-  createdTime: String // TODO: Use proper datatype here!
+  typ: String,
+  message: Option[String],
+  picture: Option[String],
+  link: Option[String],
+  name: Option[String],
+  caption: Option[String],
+  description: Option[String],
+  icon: Option[String],
+  createdTime: String
 )
 
 object Formats {
@@ -90,7 +97,7 @@ object Formats {
     def reads(json: JsValue): JsResult[GroupDetails] = for {
       id            <- (json \ "id").validate[String]
       name          <- (json \ "name").validate[String]
-      description         <- (json \ "description").validate[String]
+      description   <- (json \ "description").validate[String]
     } yield GroupDetails(id, name, description)
   }
 
@@ -98,9 +105,28 @@ object Formats {
     def reads(json: JsValue): JsResult[FeedEntry] = for {
       id          <- (json \ "id").validate[String]
       from        <- (json \ "from" \ "name").validate[String]
-      message     =  (json \ "message").validate[String].asOpt getOrElse "???"
+      typ         <- (json \ "type").validate[String]
+      message     <- (json \ "message").validate[Option[String]]
+      picture     <- (json \ "picture").validate[Option[String]]
+      link        <- (json \ "link").validate[Option[String]]
+      name        <- (json \ "name").validate[Option[String]]
+      caption     <- (json \ "caption").validate[Option[String]]
+      description <- (json \ "description").validate[Option[String]]
+      icon        <- (json \ "icon").validate[Option[String]]
       createdTime <- (json \ "created_time").validate[String]
-    } yield FeedEntry(id, from, message, createdTime)
+    } yield FeedEntry(
+      id,
+      from,
+      typ,
+      message,
+      picture,
+      link,
+      name,
+      caption,
+      description,
+      icon,
+      createdTime
+    )
   }
 
   implicit val FeedFormat: Reads[Feed] = new Reads[Feed] {

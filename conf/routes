@@ -10,6 +10,7 @@ GET     /auth/callback              controllers.Auth.callback
 GET     /groups                     controllers.Groups.index
 GET     /groups/:id                 controllers.Groups.show(id)
 GET     /groups/:id/sync            controllers.Groups.sync(id)
+GET     /groups/:id/tags            controllers.Groups.tags(id)
 GET     /groups/:id/tags/:tag       controllers.Groups.tag(id, tag)
 
 # Map static resources from the /public folder to the /assets URL path
